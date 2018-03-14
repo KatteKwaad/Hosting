@@ -38,23 +38,32 @@ namespace Microsoft.Extensions.Hosting.Internal
 
             var delayStart = new TaskCompletionSource<object>();
             cancellationToken.Register(obj => ((TaskCompletionSource<object>)obj).TrySetCanceled(), delayStart);
-            _hostLifetime.RegisterDelayStartCallback(obj => ((TaskCompletionSource<object>)obj).TrySetResult(null), delayStart);
-            _hostLifetime.RegisterStopCallback(obj => (obj as IApplicationLifetime)?.StopApplication(), _applicationLifetime);
+            await _hostLifetime.RegisterDelayStartCallbackAsync(async obj =>
+            {
+                try
+                {
+                    _hostedServices = Services.GetService<IEnumerable<IHostedService>>();
+
+                    foreach (var hostedService in _hostedServices)
+                    {
+                        // Fire IHostedService.Start
+                        await hostedService.StartAsync(cancellationToken).ConfigureAwait(false);
+                    }
+
+                    // Fire IApplicationLifetime.Started
+                    _applicationLifetime?.NotifyStarted();
+
+                    _logger.Started();
+
+                    delayStart.TrySetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    delayStart.TrySetException(ex);
+                }
+            }, null);
 
             await delayStart.Task;
-
-            _hostedServices = Services.GetService<IEnumerable<IHostedService>>();
-
-            foreach (var hostedService in _hostedServices)
-            {
-                // Fire IHostedService.Start
-                await hostedService.StartAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            // Fire IApplicationLifetime.Started
-            _applicationLifetime?.NotifyStarted();
-
-            _logger.Started();
         }
 
         public async Task StopAsync(CancellationToken cancellationToken = default)

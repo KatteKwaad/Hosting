@@ -15,15 +15,7 @@ namespace Microsoft.Extensions.Hosting
         /// </summary>
         /// <param name="callback">A callback that will be invoked when the host should continue.</param>
         /// <param name="state">State to pass to the callback.</param>
-        void RegisterDelayStartCallback(Action<object> callback, object state);
-
-        /// <summary>
-        /// Called at the start of <see cref="IHost.StartAsync(CancellationToken)"/> to register the given callback for initiating the
-        /// application shutdown process.
-        /// </summary>
-        /// <param name="callback">A callback to invoke when an external signal indicates the application should stop.</param>
-        /// <param name="state">State to pass to the callback.</param>
-        void RegisterStopCallback(Action<object> callback, object state);
+        Task RegisterDelayStartCallbackAsync(Func<object, Task> callback, object state);
 
         /// <summary>
         /// Called from <see cref="IHost.StopAsync(CancellationToken)"/> to indicate that the host as stopped and clean up resources.
